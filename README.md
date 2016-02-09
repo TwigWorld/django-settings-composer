@@ -7,14 +7,14 @@ Django allows developers to reference only a single settings file, and leaves it
 
 > We don't need a default solution for this. It's not within the scope of this project to tell people how they should organize their settings files. Take that opportunity to showcase your individualism." <cite>Adrian Holovaty, Django co-creator</cite>
 
-That's all very well, and unique development environments often require bespoke solutions, but most of us are trying to solve the same problem without any established pattern to do so. The result is complex and hard to follow settings files, with duplication and multiple chains of inheritence.
+That's all very well, and unique development environments often require bespoke solutions, but most of us are trying to solve the same problem without any accepted pattern to do so. The result can be complex and hard to follow settings files, with duplicated definitions and multiple chains of inheritence.
 
 Django Settings Composer seeks to provide:
 
 - minimal setup
 - maximum flexibility
-- the exact same syntax as standard Django settings (no class inheritence)
-- clear, consistent override rules
+- ability to use the exact same syntax as standard Django settings files (no class definiitons)
+- clear, consistent update/override rules
 - introspection to see exactly how a given Django Settings object was compiled
 
 Django Settings Composer allows you to:
@@ -22,12 +22,12 @@ Django Settings Composer allows you to:
 1. define project wide global settings and defaults
 2. suplement or override these with site-specific settings
 3. define environment-specific settings such as databases and keys
-4. 'switch on' specific settings groups, such as debug mode or use a sqlite database
-5. exclude certain apps, middleware etc. for specific setups
+4. switch on/off whole setting groups, such as debug mode or https
+5. exclude certain apps, middleware etc. under certain conditions
 
 ## Setup
 
-You can use as much or as little of the customisablity as you require. Django Settings Composer merely provides a basic framework and a few conventions to follow. The setting loader logic will look for files based on a particular permutation of environmental variables, but it doesn't care if individual files are missing, so only create the files you need.
+You can use as much or as little of the customisablity as you require. Django Settings Composer merely provides a basic framework and a few conventions to follow. The setting loader logic will look for files based on a particular permutation of environmental variables. If certain environmental variables are not set, Django Settings Composer will not attempt to load settings for them.
 
 The loading logic is as follows:
 
@@ -35,8 +35,6 @@ The loading logic is as follows:
 2. A project-wide, environment-specific settings module
 3. A site-specific settings module
 4. A site-specific, environment-specific settings module
-5. A settings module per 'switch'
-6. An optional final module, for custom clean-up
 
 ### Environment variables
 
@@ -48,15 +46,12 @@ export DJANGO_SETTINGS_MODULE=settings_composer.settings
 
 Then you only really need to set one other environment variable to get going:
 
-**SETTINGS_COMPOSER_PROJECT**
+**SETTINGS_COMPOSER_MODULE**
 
-This is the python module that represents your django project, or more accurately, the module that directly contains a _settings_ module.
+This is the python module that contains your settings within your project. It is effectively a replacement for **DJANGO_SETTINGS_MODULE**.
 
 ```
-export SETTINGS_COMPOSER_PROJECT=myproject
-
-# But, if your settings module is a submodule of conf, for example
-# export SETTINGS_COMPOSER_PROJECT=myproject.conf 
+export SETTINGS_COMPOSER_MODULE=myproject.settings
 ```
 
 You may also set:
@@ -79,24 +74,24 @@ export SETTINGS_COMPOSER_ENV=staging
 
 **SETTINGS_COMPOSER_SWITCHES**
 
-This is a comma separated list of settings files within _myproject.settings.switches_. These only exist on a project-wide basis as the idea is to give you a clean way of turning features on and off regardless of your current site or environment.
+This is a comma separated list of switches in the form (group_name):(switch_name). These switches will be applied immediately after all the modules have been loaded. They must have been defined somewhere in the loaded settings (see **Advanced Usage**).
 
 ```
-export SETTINGS_COMPOSER_SWITCHES=debug_off,test_db
+export SETTINGS_COMPOSER_SWITCHES=debug:off,database:test
 ```
 
 **SETTINGS_COMPOSER_VERBOSE**
 
-If set to 'true' or 'yes', Django Settings Composer will report each step it takes throughout the loading phase to **stdout**.
+If set to 'true' or 'yes', Django Settings Composer will report each step it takes throughout the loading phase.
 
 ```
 export SETTINGS_COMPOSER_VERBOSE=yes
 ```
 
-### A really simple project layout
+### Example project layout with multiple environments
 
 ```
-export SETTINGS_COMPOSER_PROJECT=myproject
+export SETTINGS_COMPOSER_MODULE=myproject.settings
 export SETTINGS_COMPOSER_ENV=production
 ```
 
@@ -114,12 +109,18 @@ manage.py
                 production.py
 ```
 
-### A simple project layout with multiple sites and some switches
+This will load the following settings modules:
 
 ```
-export SETTINGS_COMPOSER_PROJECT=myproject
+myproject.settings
+myproject.settings.env.production
+```
+
+### Example project layout with multiple sites
+
+```
+export SETTINGS_COMPOSER_MODULE=myproject.settings
 export SETTINGS_COMPOSER_SITE=site_1
-export SETTINGS_COMPOSER_SWITCHES=debug_off
 ```
 
 ```
@@ -138,19 +139,21 @@ manage.py
                 __init__.py
                 site_1.py
                 site_2.py
-            switches/
-                __init__.py
-                debug_off.py
-                debug_on.py
 ```
 
-### A more complex project layout
+This will load the following settings modules:
 
 ```
-export SETTINGS_COMPOSER_PROJECT=myproject
+myproject.settings
+myproject.settings.sites.site_1
+```
+
+### Example project layout with multiple sites and environments
+
+```
+export SETTINGS_COMPOSER_MODULE=myproject.settings
 export SETTINGS_COMPOSER_SITE=site_2
 export SETTINGS_COMPOSER_ENV=staging
-export SETTINGS_COMPOSER_SWITCHES=debug_on,https_off
 ```
 
 ```
@@ -160,10 +163,7 @@ manage.py
         urls.py
         wsgi.py
         settings/
-            __init__.py  <-- imports * from globals and defaults
-            globals.py
-            defaults.py
-            finally.py
+            __init__.py
             env/
                 __init__.py
                 local.py
@@ -177,6 +177,7 @@ manage.py
                         __init__.py
                         local.py
                         staging.py
+                        production.py
                 site_2/
                     __init__.py
                     env/
@@ -184,98 +185,184 @@ manage.py
                         local.py
                         staging.py
                         production.py
-                    __init__.py
-            switches/
-                debug_off.py
-                debug_on.py
-                https_off.py
-                https_on.py
-                no_debug_toolbar.py
-                test_db.py
 ```
 
-The above setup will load the following settings modules, in order:
+This will load the following settings modules:
 
 ```
 myproject.settings
 myproject.settings.env.staging
 myproject.settings.sites.site_2
 myproject.settings.sites.site_2.env.staging
-myproject.settings.switches.debug_on
-myproject.settings.switches.https_off
-myproject.settings.finally
 ```
 
-This may seem somewhat complex, but that is the nature of building flexibility into code. The important things to remember are:
+## Basic usage
 
-- There is no inheritence to work out, just a fixed loading order
-- If a settings file is not required for a particular permutation, don't include it
-- Each file works like any other self-contained Django settings file
-- You can put settings directly in an init file, or you can import from sub-modules if you'd prefer to be more organised
+In the simplest case, just create the settings files you need and define settings in them just as you would a normal Django settings file.
 
-_Note: Use **finally.py** only for logic such as compiling a final setting once all other settings have been loaded. It should go without saying that applying a setting here, such as **DEBUG**, will override any other definitions regardless of environmental settings files._
+There is no inheritence to work out, just a fixed loading order.
 
-## Debugging
+Each settings file is self contained, so for example using the above setup you can't _directly_ access settings defined in 'myproject.settings.env.staging' within 'myproject.settings.sites.site_2.env.staging' (but you can still overwrite previously defined settings).
 
-Large projects can have a lot of settings, and even with the best intentions it's not always clear where a setting may live or be overriden. With that in mind, Django Settings Composer builds some useful properties right into the settings.
-
-**SETTINGS_COMPOSER_FILES**
-
-These are the files that Django Settings Composer loaded, or attempted to load, in order. Each item is a 2-tuple containing the module name, and a flag to say whether or not that module was succesfully loaded.
-
-**SETTINGS_COMPOSER_ORIGIN**
-
-This ought to be the silver bullet in your settings-debugging arsenal. It is a dictionary, where each key is a setting name, and each value is the name of the module (or modules in some cases) that was/were responsible for setting it.
-
-If you can't figure out why a setting isn't changing where you expect it to, look it up here.
-
-### Verbose mode
-
-For a detailed report of what Django Settings Composer did, as well as the environmental variables it encountered, turn on verbose mode through the **SETTINGS_COMPOSER_VERBOSE** environmental variable.
+If more fluidity is required, Django Settings Composer provides a range of definable 'actions' that can be triggered when a settings module is loaded.
 
 ## Advanced usage
 
 It is very much by design that individal settings files aren't aware of other settings files. This is in order to minimise the complication of inheritence.
 
-With that said, there are certain situations where you want to adjust a previously defined setting without redefining it, which would be both complicated and non-DRY. Notable settings that are likely to fall into this category include **INSTALLED_APPS** and **MIDDLEWARE_CLASSES**.
+With that said, there are certain situations where you want to adjust a previously defined setting without redefining it, or access the current settings context.
 
-For settings that are either lists or dictionaries, you can opt to exclude previously defined values, or add/update them with new values.
+The following actions can be included in a settings module to trigger advanced behaviours.
 
-Each time Django Settings Composer encoutners one of these modifying settings, it will _combine it with any previously encountered settings of the same name_. Then, when all settings files have been loaded, the modifications will be applied against the target setting.
+_Note: When a module is loaded, actions are executed in the following order, before the module's settings are applied. The exception is on_complete actions, which are executed after all the main modules have been loaded and applied._
 
-_Note that you will be able to use **SETTINGS_COMPOSER_ORIGIN** to see all of the settings files that contribute to a modification setting_
+### load
 
-### Exclude
+Simply loads the named module or modules. This happens ahead of any other actions.
 
-From a design point of view, it is often clearer to include everything in your core project settings, and then exclude things if you don't need them, such as debug or testing tools. Certainly in the case of middleware, where loading order is important, this is the only way to have it both ways (i.e. control whether something goes in and what order it goes in relative to everything else.)
-
-Depending on whether the setting being targetted for exclusion is an iterable or a dictionary, the exclusion list(s) you define will contain either the item to remove, or the name of a key to delete.
-
-In practical terms, simply define a setting **SETTINGS_COMPOSER_EXCLUDE_(SETTING_NAME)**. For example:
+The main reason for using this rather than importing the module via Python imports is that Django Settings Composer tracks the import for debugging purposes.
 
 ```
-SETTINGS_COMPOSER_EXCLUDE_INSTALLED_APPS = ['debug_toolbar']
-SETTINGS_COMPOSER_EXCLUDE_MIDDLEWARE_CLASSES = ['debug_toolbar.middleware.DebugToolbarMiddleware']
+import settings_composer
+
+settings_composer.load(
+    'settings.definitions',
+    'settings.globals',
+    'settings.defaults',
+    'settings.on_complete'
+)
 
 ```
 
-### Update
+### create_switch
 
-Update definitions can be used to either add items to a list, or to insert key-value pairs into a dictionary. This is most useful if you want to override a particular dictionary entry without having to worry about other potential entries.
-
-You could also use it to add further items to **INSTALLED_APPS** for example, but for reasons stated above, you might want to use an exclusion rule instead. Ultimately it is a matter of preferred convention.
-
-To update an existing setting, define a setting **SETTINGS_COMPOSER_UPDATE_(SETTING_NAME)**. For example:
+Defines a switch, which consists of a group and switch name, as either a settings dictionary, or a module path.
 
 ```
-SETTINGS_COMPOSER_UPDATE_DATABASES = {
-    'default': {
+import settings_composer
+
+settings_composer.create_switch('debug', 'off', {
+    'DEBUG': False,
+    'TEMPLATE_DEBUG': False,
+    'DEBUG_PROPAGATE_EXCEPTIONS': False
+})
+settings_composer.create_switch('debug', 'on', {
+    'DEBUG': True,
+    'TEMPLATE_DEBUG': True,
+    'DEBUG_PROPAGATE_EXCEPTIONS': False
+})
+settings_composer.create_switch('debug', 'propagate', {
+    'DEBUG': True,
+    'TEMPLATE_DEBUG': True,
+    'DEBUG_PROPAGATE_EXCEPTIONS': True
+})
+
+settings_composer.create_switch('https', 'off', 'settings.switches.https_off')
+settings_composer.create_switch('https', 'on', 'settings.switches.https_on')
+
+```
+
+### apply_switch
+
+Apply a previously defined switch.
+
+```
+import settings_composer
+
+settings_composer.apply_switch('debug', 'off')
+settings_composer.apply_switch('https', 'on')
+```
+
+### set
+
+Set the named setting(s) directly. In general you can simply create the definiton as a module assignment, but this is still useful for defining settings within a function or if you need to set values before other actions are executed.
+
+```
+import settings_composer
+
+settings_composer.set(FOO=True, BAR=False)
+
+# is the same as
+
+FOO = True
+BAR = False
+```
+
+### extend_setting
+
+Extend a previously defined list setting with another list.
+
+```
+import settings_composer
+
+settings_composer.extend_setting(INSTALLED_APPS, ['debug_tools', 'testing_tools'])
+```
+
+
+### update_setting
+
+Update a previously defined dictionary setting with new values.
+
+```
+import settings_composer
+
+settings_composer.update_setting(
+    DATABASES,
+    default={
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'test',
     }
-}
-SETTINGS_COMPOSER_UPDATE_SECURE_PROXY_SSL_HEADER = ('https')
-
+)
 ```
 
-_Note: You must define the original setting before attempting to update it._
+
+### exclude_from_setting
+
+Exclude values from a previously defined setting. This can either be items from a list or keys from a dictionary.
+
+```
+settings_composer.exclude_from_setting('INSTALLED_APPS', ['debug_tools', 'testing_tools'])
+settings_composer.exclude_from_setting('DATABASES', ['backup'])
+```
+
+### on_complete
+
+To use this action, pass in a function. The function should take a single argument, which is a dictionary of all the current settings.
+
+This provides a fairly reliable way of accessing, checking and updating previously defined settings once they have been loaded into a complete state.
+
+Be wary of modifying the settings dictionary directly - Django Settings Composer has no visibility of these changes so it will make debugging more difficult.
+
+_Note: You can trigger actions from within the function, including other on_complete actions, but it would be best practice to keep the logic within the function simple._
+
+```
+import settings_composer
+
+def cleanup(settings):
+    if not settings.get('DEBUG'):
+        settings_composer.set(FOO='bar')
+        settings_composer.apply_switch('https', 'on')
+        settings_composer.exclude_from_setting('INSTALLED_APPS', ['debug_tools', 'testing_tools'])
+```
+
+
+## Debugging
+
+Large projects can have a lot of settings, and even with the best intentions it's not always clear where a setting may be defined or overriden. Django Settings Composer aims to simplify the act of defining settings, but it also provides new and interesting ways to make settings more complicated if proper care isn't taken.
+
+With that in mind, Django Settings Composer builds a useful property right into the settings.
+
+**SETTINGS_COMPOSER_SOURCE**
+
+This  is a dictionary, where each key is a setting name, and each value is the name of the module (or actions) that was/were responsible for setting it.
+
+If you can't figure out why a setting isn't changing where you expect it to, look it up here.
+
+_Note: Each value in **SETTINGS_COMPOSER_SOURCE** is a list. If a setting is overridden at any point, the final entry will be the source of the current value, and previous entries relate to prior definitions._
+
+```
+from django.conf import settings
+print settings.SETTINGS_COMPOSER_SOURCE['DEBUG'][-1]
+
+# [SWITCH <debug: off> DEFINED IN settings.definitions LOADED BY settings] SET BY FUNCTION 'clean_up' CALLED FROM settings.clean_up_functions LOADED BY settings
+```

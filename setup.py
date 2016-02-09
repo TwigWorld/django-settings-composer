@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='django-settings-composer',
-    version='0.1.0',
+    version='0.2.0',
     author='Colin Barnwell',
     scripts=[],
     description="A 'sensible' way to gather settings dynamically",
@@ -10,5 +10,9 @@ setup(
     install_requires=[
         "Django >=1.6 <=1.9",
     ],
-    packages=['settings_composer']
+    packages=[
+        'settings_composer',
+        'settings_composer.management',
+        'settings_composer.management.commands'
+    ]
 )

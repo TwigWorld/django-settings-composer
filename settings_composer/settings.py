@@ -1,28 +1,15 @@
 # A pseudo-settings file that loads the actual settings files for a project
 # based on environment variables
 
-from .helpers import (
-    collate_settings_modules,
-    apply_settings_module,
-    apply_updates,
-    apply_exclusions
-)
+from . import settings_manager
+from .loading import collate_settings_modules
 
-SETTINGS_COMPOSER_MODULES = []
-SETTINGS_COMPOSER_ORIGIN = {}
+# Apply settings to current module
+settings_manager.bind(globals())
+settings_manager.apply_settings_modules(collate_settings_modules())
 
-for i, settings_module in enumerate(collate_settings_modules()):
-    applied_settings = apply_settings_module(
-        settings_module,
-        globals(),
-        SETTINGS_COMPOSER_ORIGIN
-    )
-    # Processed entries are a tuple of module name and success flag
-    if applied_settings is None:
-        SETTINGS_COMPOSER_MODULES.append((settings_module, False))
-    else:
-        SETTINGS_COMPOSER_MODULES.append((settings_module, True))
-        SETTINGS_COMPOSER_ORIGIN.update(applied_settings)
+# Define custom settings
+SETTINGS_COMPOSER_SOURCE = settings_manager.settings_source
 
-apply_updates(globals())
-apply_exclusions(globals())
+# Cleanup
+settings_manager.unbind()
