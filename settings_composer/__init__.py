@@ -7,9 +7,11 @@ settings_manager = SettingsManager()
 
 
 # These actions can be used anywhere within a module. They will be exectuted
-# in the order they are defined here, before any module definitions are applied
-# to the settings -- with the exception of on_complete actions which are only
-# executed once all of the primary modules have been loaded.
+# in the order they are defined here. 'load' actions will be processed before
+# any module definitions or other actions are applied to the settings. All
+# other actions are applied after module definitions, with the exception of
+# 'clean' actions which are only executed once all of the primary modules have
+# been loaded.
 
 def load(*module_names):
     """
@@ -18,7 +20,18 @@ def load(*module_names):
     settings_manager.add_action(
         'load',
         module_names=module_names
-     )
+    )
+
+
+def set(**settings):
+    """
+    Apply keyword settings directly (useful within function scope). Can also be
+    used if you need to be sure something is set before modifying it.
+    """
+    settings_manager.add_action(
+        'set',
+        **settings
+    )
 
 
 def create_switch(group_name, switch_name, module_or_settings):
@@ -41,17 +54,6 @@ def apply_switch(group_name, switch_name):
         'apply_switch',
         group_name=group_name,
         switch_name=switch_name
-    )
-
-
-def set(**settings):
-    """
-    Apply keyword settings directly (useful within function scope). Can also be
-    used if you need to be sure something is set before modifying it.
-    """
-    settings_manager.add_action(
-        'set',
-        **settings
     )
 
 
@@ -89,7 +91,7 @@ def exclude_from_setting(setting_name, items):
     )
 
 
-def on_complete(function):
+def clean(function):
     """
     Execute a function after all primary modules have been loaded. The function
     must take the current settings dictionary as an argument.
@@ -98,6 +100,6 @@ def on_complete(function):
     checking whether DEBUG is turned on once all settings have been loaded.
     """
     settings_manager.add_action(
-        'on_complete',
+        'clean',
         function=function
     )

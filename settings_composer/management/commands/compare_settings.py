@@ -149,6 +149,20 @@ class Command(BaseCommand):
             sys.stdout.write("'{setting_name}' is not a valid setting name to compare\n".format(setting_name=setting_name))
         original_value = getattr(self.original_settings, setting_name, '<NOT SET>')
         composer_value = getattr(self.composer_settings, setting_name, '<NOT_SET>')
+        if isinstance(original_value, (list, tuple)) and isinstance(composer_value, (list, tuple)):
+            sys.stdout.write('\n\n----------------ADDED---------------\n')
+            sys.stdout.write(', '.join(set(composer_value) - set(original_value) or ['<NONE>']))
+            sys.stdout.write('\n\n\n---------------DELETED--------------\n')
+            sys.stdout.write(', '.join(set(original_value) - set(composer_value) or ['<NONE>']))
+        elif isinstance(original_value, dict) and isinstance(composer_value, dict):
+            sys.stdout.write('\n\n----------------ADDED---------------\n')
+            sys.stdout.write(', '.join(set(composer_value) - set(original_value) or ['<NONE>']))
+            sys.stdout.write('\n\n\n---------------DELETED--------------\n')
+            sys.stdout.write(', '.join(set(original_value) - set(composer_value) or ['<NONE>']))
+            sys.stdout.write('\n\n\n---------------CHANGED--------------\n')
+            for key in set(original_value) & set(composer_value):
+                if original_value[key] != composer_value[key]:
+                    sys.stdout.write(key)
         sys.stdout.write('\n\n----------ORIGINAL SETTING----------\n')
         sys.stdout.write(unicode(original_value))
         sys.stdout.write('\n\n\n----------COMPOSER SETTING----------\n')

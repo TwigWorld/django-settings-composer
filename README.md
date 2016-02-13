@@ -214,11 +214,11 @@ With that said, there are certain situations where you want to adjust a previous
 
 The following actions can be included in a settings module to trigger advanced behaviours.
 
-_Note: When a module is loaded, actions are executed in the following order, before the module's settings are applied. The exception is on_complete actions, which are executed after all the main modules have been loaded and applied._
+_Note: When a module is loaded, actions are executed in the following order. Load actions are executed before the module's settings are applied, while other actions are executed afterwards with the exception of 'clean' actions, which are executed after all the main modules have been loaded and applied._
 
 ### load
 
-Simply loads the named module or modules. This happens ahead of any other actions.
+Simply loads the named module or modules. This happens ahead of any other actions or module definitions are processed.
 
 The main reason for using this rather than importing the module via Python imports is that Django Settings Composer tracks the import for debugging purposes.
 
@@ -229,9 +229,24 @@ settings_composer.load(
     'settings.definitions',
     'settings.globals',
     'settings.defaults',
-    'settings.on_complete'
+    'settings.clean_up'
 )
 
+```
+
+### set
+
+Set the named setting(s) directly. In general you can simply create the definiton as a module assignment, but this is still useful for defining settings within a function or if you are particularly concerned with controlling the order of setting assignments.
+
+```
+import settings_composer
+
+settings_composer.set(FOO=True, BAR=False)
+
+# is the same as
+
+FOO = True
+BAR = False
 ```
 
 ### create_switch
@@ -273,21 +288,6 @@ settings_composer.apply_switch('debug', 'off')
 settings_composer.apply_switch('https', 'on')
 ```
 
-### set
-
-Set the named setting(s) directly. In general you can simply create the definiton as a module assignment, but this is still useful for defining settings within a function or if you need to set values before other actions are executed.
-
-```
-import settings_composer
-
-settings_composer.set(FOO=True, BAR=False)
-
-# is the same as
-
-FOO = True
-BAR = False
-```
-
 ### extend_setting
 
 Extend a previously defined list setting with another list.
@@ -325,7 +325,7 @@ settings_composer.exclude_from_setting('INSTALLED_APPS', ['debug_tools', 'testin
 settings_composer.exclude_from_setting('DATABASES', ['backup'])
 ```
 
-### on_complete
+### clean
 
 To use this action, pass in a function. The function should take a single argument, which is a dictionary of all the current settings.
 
@@ -333,16 +333,18 @@ This provides a fairly reliable way of accessing, checking and updating previous
 
 Be wary of modifying the settings dictionary directly - Django Settings Composer has no visibility of these changes so it will make debugging more difficult.
 
-_Note: You can trigger actions from within the function, including other on_complete actions, but it would be best practice to keep the logic within the function simple._
+_Note: You can trigger actions from within the function, including other clean actions, but it would be best practice to keep the logic within the function simple._
 
 ```
 import settings_composer
 
-def cleanup(settings):
+def clean_settings(settings):
     if not settings.get('DEBUG'):
         settings_composer.set(FOO='bar')
         settings_composer.apply_switch('https', 'on')
         settings_composer.exclude_from_setting('INSTALLED_APPS', ['debug_tools', 'testing_tools'])
+
+settings_composer.clean(clean_settings)
 ```
 
 

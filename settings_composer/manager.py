@@ -15,7 +15,7 @@ ACTION_NAMES = [
     'extend_setting',
     'update_setting',
     'exclude_from_setting',
-    'on_complete'
+    'clean'
 ]
 
 
@@ -115,32 +115,26 @@ class SettingsManager(object):
         for module_name in module_names:
             self.apply_settings_module(module_name)
         self.apply_env_switches()
-        self.process_on_complete_actions()
+        self.process_clean_actions()
 
     def apply_settings_module(self, module_name, source_name=None):
         source_name = source_name or module_name
         self.create_action_context(source_name)
         module = load_settings_module(module_name)
-
         self.process_load_actions()
-        self.process_create_switch_actions()
-        self.process_apply_switch_actions()
-        self.process_set_actions()
-        self.process_extend_setting_actions()
-        self.process_update_setting_actions()
-        self.process_exclude_from_setting_actions()
-
         # Apply settings directly from module
         self.update_settings(
             get_settings_from_module(module),
             source_name
         )
+        self.process_standard_actions()
 
     def apply_env_switches(self):
         self.create_action_context('[Environment]')
         for group_name, switch_name in environment.get_switches().items():
             self.add_action('apply_switch', group_name=group_name, switch_name=switch_name)
-        self.process_apply_switch_actions()
+        self.process_load_actions()
+        self.process_standard_actions()
 
     def apply_function(self, function, source_name):
         source_name = u"FUNCTION '{function_name}' CALLED FROM {source_name}".format(
@@ -148,16 +142,9 @@ class SettingsManager(object):
             source_name=source_name
         )
         self.create_action_context(source_name)
-
-        function(self.target_settings)
-
         self.process_load_actions()
-        self.process_create_switch_actions()
-        self.process_apply_switch_actions()
-        self.process_set_actions()
-        self.process_extend_setting_actions()
-        self.process_update_setting_actions()
-        self.process_exclude_from_setting_actions()
+        function(self.target_settings)
+        self.process_standard_actions()
 
     # Settings
 
@@ -172,6 +159,14 @@ class SettingsManager(object):
 
     # Process actions
 
+    def process_standard_actions(self):
+        self.process_set_actions()
+        self.process_create_switch_actions()
+        self.process_apply_switch_actions()
+        self.process_extend_setting_actions()
+        self.process_update_setting_actions()
+        self.process_exclude_from_setting_actions()
+
     def process_load_actions(self):
         for source_name, kwargs in self.get_current_actions('load'):
             for module_name in kwargs['module_names']:
@@ -182,6 +177,10 @@ class SettingsManager(object):
                         source_name=source_name
                     )
                 )
+
+    def process_set_actions(self):
+        for source_name, kwargs in self.get_current_actions('set'):
+            self.update_settings(kwargs, source_name)
 
     def process_create_switch_actions(self):
         for source_name, kwargs in self.get_current_actions('create_switch'):
@@ -225,10 +224,6 @@ class SettingsManager(object):
                 self.update_settings(definition, switch_source_name)
             else:
                 self.apply_settings_module(definition, switch_source_name)
-
-    def process_set_actions(self):
-        for source_name, kwargs in self.get_current_actions('set'):
-            self.update_settings(kwargs, source_name)
 
     def process_extend_setting_actions(self):
         for source_name, kwargs in self.get_current_actions('extend_setting'):
@@ -295,7 +290,7 @@ class SettingsManager(object):
                     source_name=source_name
                 )
 
-    def process_on_complete_actions(self):
-        for source_name, kwargs in self.get_all_actions('on_complete'):
+    def process_clean_actions(self):
+        for source_name, kwargs in self.get_all_actions('clean'):
             function = kwargs['function']
             self.apply_function(function, source_name)
