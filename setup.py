@@ -1,18 +1,26 @@
 from distutils.core import setup
 
+from setuptools import find_packages
+
+
+install_requires = [
+    "Django >=1.6 <=1.9",
+]
+
+extras_require = {
+    'test': ['mock >=1']
+}
+
+
 setup(
     name='django-settings-composer',
-    version='0.3.0',
+    version='0.9.0',
     author='Colin Barnwell',
-    scripts=[],
     description="A 'sensible' way to gather settings dynamically",
     long_description=open('README.md').read(),
-    install_requires=[
-        "Django >=1.6 <=1.9",
-    ],
-    packages=[
-        'settings_composer',
-        'settings_composer.management',
-        'settings_composer.management.commands'
-    ]
+    packages=find_packages(),
+    scripts=[],
+    install_requires=install_requires,
+    extras_require=extras_require,
+    tests_require=extras_require['test']
 )

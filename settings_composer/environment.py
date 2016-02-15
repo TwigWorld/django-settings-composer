@@ -30,7 +30,7 @@ def get_switches():
     switches = {}
     env_switches = os.environ.get(constants.SWITCHES_VARIABLE_NAME, '')
     for env_switch in env_switches.split(','):
-        env_swtich = env_switch.strip()
+        env_switch = env_switch.strip()
         if not env_switch:
             continue  # Simply ignore blanks
         try:
@@ -50,5 +50,6 @@ def get_switches():
         switches[group_name] = switch_name
     return switches
 
+
 def is_verbose():
-    return os.environ.get(constants.VERBOSE_VARIABLE_NAME, '').lower() in constants.TRUE_VALUES
+    return os.environ.get(constants.VERBOSE_VARIABLE_NAME, '').strip().lower() in constants.TRUE_VALUES

@@ -1,3 +1,4 @@
+from . import settings_manager
 from . import environment
 from .helpers import output_if_verbose
 
@@ -47,3 +48,9 @@ def collate_settings_modules():
     )
 
     return settings_files
+
+
+def collect_settings(target_settings):
+    settings_manager.bind(target_settings)
+    settings_manager.apply_settings_modules(collate_settings_modules())
+    settings_manager.unbind()

@@ -66,7 +66,7 @@ export SETTINGS_COMPOSER_SITE=mysite
 
 **SETTINGS_COMPOSER_ENV**
 
-This is the settings file within _myproject.settings.env_ and/or _myproject.settings.sites.mysite.env_ that contains environment/site-environment specific settings.
+This is the settings file within _myproject.settings.env_ and potentially _myproject.settings.sites.mysite.env_ that contains environment/site-environment specific settings.
 
 ```
 export SETTINGS_COMPOSER_ENV=staging
@@ -74,7 +74,7 @@ export SETTINGS_COMPOSER_ENV=staging
 
 **SETTINGS_COMPOSER_SWITCHES**
 
-This is a comma separated list of switches in the form (group_name):(switch_name). These switches will be applied immediately after all the modules have been loaded. They must have been defined somewhere in the loaded settings (see **Advanced Usage**).
+This is a comma separated list of switches in the form (group_name):(switch_name). These switches will be applied immediately after all the modules have been loaded, but before cleanup. They must have been defined somewhere in the loaded settings (see **Advanced Usage**).
 
 ```
 export SETTINGS_COMPOSER_SWITCHES=debug:off,database:test
@@ -131,10 +131,6 @@ manage.py
         wsgi.py
         settings/
             __init__.py
-            env/
-                __init__.py
-                local.py
-                production.py
             sites/
                 __init__.py
                 site_1.py
@@ -210,19 +206,25 @@ If more fluidity is required, Django Settings Composer provides a range of defin
 
 It is very much by design that individal settings files aren't aware of other settings files. This is in order to minimise the complication of inheritence.
 
-With that said, there are certain situations where you want to adjust a previously defined setting without redefining it, or access the current settings context.
+With that said, there are certain situations where you want to amend a previously defined setting without redefining it, or access the compiled settings definitions.
 
-The following actions can be included in a settings module to trigger advanced behaviours.
+A list of available actions can be found below.
 
-_Note: When a module is loaded, actions are executed in the following order. Load actions are executed before the module's settings are applied, while other actions are executed afterwards with the exception of 'clean' actions, which are executed after all the main modules have been loaded and applied._
+When a module is loaded, actions are executed in the following order:
+ 1. 'Load' actions are executed
+ 2. Direct settings definitions are applied
+ 3. Remaing actions are executed, with the exception of 'clean' actions
+ 4. After **all** the main modules have been loaded:
+   - Environmental switches are applied
+   - 'Clean' actions are performed
 
 ### load
 
 Simply loads the named module or modules. This happens ahead of any other actions or module definitions are processed.
 
-The main reason for using this rather than importing the module via Python imports is that Django Settings Composer tracks the import for debugging purposes.
+The main reasons for using this rather than importing the module via Python imports are that Django Settings Composer tracks the import for debugging purposes, and it also reloads the module if it has been loaded before.
 
-```
+```python
 import settings_composer
 
 settings_composer.load(
@@ -236,24 +238,33 @@ settings_composer.load(
 
 ### set
 
-Set the named setting(s) directly. In general you can simply create the definiton as a module assignment, but this is still useful for defining settings within a function or if you are particularly concerned with controlling the order of setting assignments.
+Set the named setting(s) directly. Although you can simply update setting definitions through direct module assignment, this method is still useful for defining settings within another scope (e.g. a function), or if you are particularly concerned with the order in which settings are defined.
 
-```
+```python
 import settings_composer
+
+# this call
 
 settings_composer.set(FOO=True, BAR=False)
 
-# is the same as
+# is effectively the same as these statements
 
 FOO = True
 BAR = False
+
+# but note that due to action processing order
+
+settings_composer.set(FOO=True)
+FOO = False
+
+# FOO will evaluate to True in the above case
 ```
 
 ### create_switch
 
 Defines a switch, which consists of a group and switch name, as either a settings dictionary, or a module path.
 
-```
+```python
 import settings_composer
 
 settings_composer.create_switch('debug', 'off', {
@@ -281,7 +292,7 @@ settings_composer.create_switch('https', 'on', 'settings.switches.https_on')
 
 Apply a previously defined switch.
 
-```
+```python
 import settings_composer
 
 settings_composer.apply_switch('debug', 'off')
@@ -292,7 +303,7 @@ settings_composer.apply_switch('https', 'on')
 
 Extend a previously defined list setting with another list.
 
-```
+```python
 import settings_composer
 
 settings_composer.extend_setting(INSTALLED_APPS, ['debug_tools', 'testing_tools'])
@@ -303,7 +314,7 @@ settings_composer.extend_setting(INSTALLED_APPS, ['debug_tools', 'testing_tools'
 
 Update a previously defined dictionary setting with new values.
 
-```
+```python
 import settings_composer
 
 settings_composer.update_setting(
@@ -320,7 +331,7 @@ settings_composer.update_setting(
 
 Exclude values from a previously defined setting. This can either be items from a list or keys from a dictionary.
 
-```
+```python
 settings_composer.exclude_from_setting('INSTALLED_APPS', ['debug_tools', 'testing_tools'])
 settings_composer.exclude_from_setting('DATABASES', ['backup'])
 ```
@@ -329,13 +340,13 @@ settings_composer.exclude_from_setting('DATABASES', ['backup'])
 
 To use this action, pass in a function. The function should take a single argument, which is a dictionary of all the current settings.
 
-This provides a fairly reliable way of accessing, checking and updating previously defined settings once they have been loaded into a complete state.
+This provides a fairly reliable way of accessing, checking and updating previously defined settings once they have been loaded into a (nearly) complete state.
 
 Be wary of modifying the settings dictionary directly - Django Settings Composer has no visibility of these changes so it will make debugging more difficult.
 
 _Note: You can trigger actions from within the function, including other clean actions, but it would be best practice to keep the logic within the function simple._
 
-```
+```python
 import settings_composer
 
 def clean_settings(settings):
@@ -362,9 +373,17 @@ If you can't figure out why a setting isn't changing where you expect it to, loo
 
 _Note: Each value in **SETTINGS_COMPOSER_SOURCE** is a list. If a setting is overridden at any point, the final entry will be the source of the current value, and previous entries relate to prior definitions._
 
-```
+```python
 from django.conf import settings
 print settings.SETTINGS_COMPOSER_SOURCE['DEBUG'][-1]
 
 # [SWITCH <debug: off> DEFINED IN settings.definitions LOADED BY settings] SET BY FUNCTION 'clean_up' CALLED FROM settings.clean_up_functions LOADED BY settings
 ```
+
+### Comparing settings
+
+Django Settings Composer was created in direct response to cleaning-up/standardising settings in several real world Django projects, so it was useful to be able to compare refactored Django Settings Composer settings with the existing settings object.
+
+As such, there is a management command **compare_settings** that does just that, and provides a crude but reasonably useful prompt to investigate discrepencies.
+
+This command is included as is, without any testing, guarantees or support beyond the built-in help. To use it, you will need to include _settings\_composer_ within **INSTALLED_APPS** for the active settings module, which **should not** be _settings\_composer.settings_.

@@ -14,12 +14,22 @@ def output_if_verbose(headline, *list_items):
             sys.stdout.write(list_item + '\n')
 
 
-def load_settings_module(module):
-    if isinstance(module, types.ModuleType):
-        return module
-    else:
-        output_if_verbose("Loading settings module", module)
-        return importlib.import_module(module)
+def load_settings_module(module_name):
+    reload_module = False
+    if module_name in sys.modules:
+        # Ensure the module is loaded fresh
+        reload_module = True
+    output_if_verbose(
+        "Loading settings module",
+        "{module_name}{reloaded}".format(
+            module_name=module_name,
+            reloaded='' if not reload_module else ' (forced reload)'
+        )
+    )
+    module = importlib.import_module(module_name)
+    if reload_module:
+        reload(module)
+    return module
 
 
 def get_settings_from_module(module):

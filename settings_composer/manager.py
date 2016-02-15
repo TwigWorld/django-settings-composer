@@ -32,14 +32,15 @@ class ActionContextManager(object):
     Actions are always added to the current context layer.
     """
 
-    def __init__(self):
+    def __init__(self, action_names):
+        self.action_names = action_names
         self.action_context_layers = {
             action_name: []
-            for action_name in ACTION_NAMES
+            for action_name in self.action_names
         }
 
     def create_context_layer(self, context_name):
-        for action_name in ACTION_NAMES:
+        for action_name in self.action_names:
             self.action_context_layers[action_name].append((context_name, deque()))
 
     def add_action(self, name, **kwargs):
@@ -83,12 +84,13 @@ class SettingsManager(object):
         self.target_settings = target_settings
         self.definitions = {}
         self.settings_source = {}
-        self.actions = ActionContextManager()
+        self.actions = ActionContextManager(ACTION_NAMES)
 
     def unbind(self):
         """
         Prevent further modification to the settings dictionary.
         """
+        self.target_settings['SETTINGS_COMPOSER_SOURCE'] = self.settings_source
         self.is_bound = False
         del self.target_settings
         del self.definitions
@@ -142,8 +144,8 @@ class SettingsManager(object):
             source_name=source_name
         )
         self.create_action_context(source_name)
-        self.process_load_actions()
         function(self.target_settings)
+        self.process_load_actions()
         self.process_standard_actions()
 
     # Settings
