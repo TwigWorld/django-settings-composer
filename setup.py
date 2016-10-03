@@ -4,7 +4,7 @@ from setuptools import find_packages
 
 
 install_requires = [
-    "django >=1.6, <=1.9",
+    "django >=1.6, <1.10",
 ]
 
 extras_require = {
@@ -14,7 +14,7 @@ extras_require = {
 
 setup(
     name='django-settings-composer',
-    version='0.9.0',
+    version='0.9.1',
     author='Colin Barnwell',
     description="A 'sensible' way to gather settings dynamically",
     long_description=open('README.md').read(),
