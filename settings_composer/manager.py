@@ -2,7 +2,8 @@ from collections import deque
 
 from .helpers import (
     load_settings_module,
-    get_settings_from_module
+    get_settings_from_module,
+    output_if_verbose
 )
 from . import environment
 
@@ -114,6 +115,7 @@ class SettingsManager(object):
     # Main logic
 
     def apply_settings_modules(self, module_names):
+        output_if_verbose("Loading settings modules")
         for module_name in module_names:
             self.apply_settings_module(module_name)
         self.apply_env_switches()
