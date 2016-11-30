@@ -4,7 +4,7 @@ from setuptools import find_packages
 
 
 install_requires = [
-    "django >=1.6, <1.10",
+    "django >=1.6, <1.11",
 ]
 
 extras_require = {
