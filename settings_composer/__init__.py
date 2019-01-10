@@ -1,4 +1,4 @@
-from manager import ACTION_NAMES, SettingsManager
+from .manager import ACTION_NAMES, SettingsManager
 
 __all__ = ACTION_NAMES
 
