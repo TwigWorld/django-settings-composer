@@ -33,14 +33,14 @@ def collate_settings_modules():
         settings_files.append(u'{settings_module}.sites.{site}')
     if env and site:
         settings_files.append(u'{settings_module}.sites.{site}.env.{env}')
-    settings_files = map(
+    settings_files = list(map(
         lambda module_name: module_name.format(
             settings_module=settings_module,
             site=site,
             env=env
         ),
         settings_files
-    )
+    ))
 
     output_if_verbose(
         "Compiling settings modules based on environmental variables",
