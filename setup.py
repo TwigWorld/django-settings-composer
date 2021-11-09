@@ -14,7 +14,7 @@ extras_require = {
 
 setup(
     name='django-settings-composer',
-    version='1.0.1',
+    version='1.0.2',
     author='Colin Barnwell',
     description="A 'sensible' way to gather settings dynamically",
     long_description=open('README.md').read(),
