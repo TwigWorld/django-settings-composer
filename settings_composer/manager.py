@@ -51,12 +51,12 @@ class ActionContextManager(object):
         if len(self.action_context_layers[name]):
             context_name, action_queue = self.action_context_layers[name].pop()
             while len(action_queue):
-                yield (context_name, action_queue.pop())
+                yield context_name, action_queue.pop()
 
     def consume_all_actions(self, name):
         while len(self.action_context_layers[name]):
             for context_name, action in self.consume_actions(name):
-                yield (context_name, action)
+                yield context_name, action
 
 
 class SettingsManager(object):
