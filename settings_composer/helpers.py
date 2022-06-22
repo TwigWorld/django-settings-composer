@@ -22,7 +22,7 @@ def load_settings_module(module_name):
     try:
         module = importlib.import_module(module_name)
         if reload_module:
-            reload(module)
+            importlib.reload(module)
     except ImportError:
         module = None
     output_if_verbose(
