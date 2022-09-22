@@ -1,4 +1,10 @@
-from StringIO import StringIO
+try:
+    # Python 2
+    from StringIO import StringIO
+except ImportError:
+    #  Python 3
+    from io import StringIO
+
 from unittest import TestCase
 
 import mock

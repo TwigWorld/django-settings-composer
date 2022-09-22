@@ -8,6 +8,9 @@ from django.core.management.base import BaseCommand, CommandError
 
 from settings_composer import constants
 
+# py3
+from builtins import str as unicode
+
 
 COMMAND_OPTIONS = [
     (
@@ -135,7 +138,7 @@ class Command(BaseCommand):
     def get_query(self):
         self.stdout.write("Enter the name of a setting to query (Ctrl-D to exit):\n")
         try:
-            setting_name = raw_input("> ")
+            setting_name = input("> ")
             self.compare_setting(setting_name)
         except EOFError:
             sys.stdout.write("\n")
