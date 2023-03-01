@@ -1,4 +1,5 @@
 import importlib
+from imp import reload
 import sys
 
 from . import environment
@@ -22,7 +23,7 @@ def load_settings_module(module_name):
     try:
         module = importlib.import_module(module_name)
         if reload_module:
-            importlib.reload(module)
+            reload(module)
     except ImportError:
         module = None
     output_if_verbose(
