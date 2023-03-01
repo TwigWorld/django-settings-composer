@@ -4,7 +4,7 @@ from setuptools import find_packages
 
 setup(
     name='django-settings-composer',
-    version='2.0.0',
+    version='2.1.0',
     author='Colin Barnwell',
     description="A 'sensible' way to gather settings dynamically",
     long_description=open('README.md').read(),
