@@ -8,8 +8,10 @@ from django.core.management.base import BaseCommand, CommandError
 
 from settings_composer import constants
 
-# py3
-from builtins import str as unicode
+try:
+    unicode
+except NameError:
+    unicode = str
 
 
 COMMAND_OPTIONS = [
